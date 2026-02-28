@@ -3,6 +3,10 @@ import Foundation
 
 public typealias JsonMap = [String: Any]
 
+private let dmApiSwiftErrorDomain = "com.distromate.dm-api-swift"
+private let dmDevLicenseErrorText =
+    "Development license is missing or corrupted. Run `distromate sdk renew` to regenerate the dev certificate."
+
 public final class DmApi {
     private let raw: DMApiObjC
 
@@ -14,10 +18,57 @@ public final class DmApi {
         appId: String? = nil,
         publicKey: String? = nil
     ) throws -> Bool {
-        try DMApiObjC.shouldSkipCheck(
-            withAppId: appId,
-            publicKey: publicKey
-        )
+        let env = ProcessInfo.processInfo.environment
+        let endpoint = (env["DM_LAUNCHER_ENDPOINT"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let token = (env["DM_LAUNCHER_TOKEN"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !endpoint.isEmpty, !token.isEmpty {
+            return false
+        }
+
+        let resolvedAppId = (appId ?? env["DM_APP_ID"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedPublicKey = (publicKey ?? env["DM_PUBLIC_KEY"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if resolvedAppId.isEmpty || resolvedPublicKey.isEmpty {
+            throw NSError(
+                domain: dmApiSwiftErrorDomain,
+                code: 1001,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "App identity is required for dev-license checks. Provide appId/publicKey or set DM_APP_ID and DM_PUBLIC_KEY.",
+                ]
+            )
+        }
+
+        let home = NSHomeDirectory()
+        if home.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            throw NSError(
+                domain: dmApiSwiftErrorDomain,
+                code: 1002,
+                userInfo: [NSLocalizedDescriptionKey: dmDevLicenseErrorText]
+            )
+        }
+
+        let pubkeyPath = (home as NSString)
+            .appendingPathComponent(".distromate-cli/dev_licenses/\(resolvedAppId)/pubkey")
+
+        guard let devPublicKeyRaw = try? String(contentsOfFile: pubkeyPath, encoding: .utf8) else {
+            throw NSError(
+                domain: dmApiSwiftErrorDomain,
+                code: 1002,
+                userInfo: [NSLocalizedDescriptionKey: dmDevLicenseErrorText]
+            )
+        }
+
+        let devPublicKey = devPublicKeyRaw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if devPublicKey.isEmpty || devPublicKey != resolvedPublicKey {
+            throw NSError(
+                domain: dmApiSwiftErrorDomain,
+                code: 1002,
+                userInfo: [NSLocalizedDescriptionKey: dmDevLicenseErrorText]
+            )
+        }
+
+        return true
     }
 
     public func getLastError() -> String? {
