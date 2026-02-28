@@ -23,5 +23,10 @@ let package = Package(
             dependencies: ["DmApiObjC"],
             path: "Sources/DmApiSwift"
         ),
+        .testTarget(
+            name: "DmApiSwiftTests",
+            dependencies: ["DmApiSwift"],
+            path: "Tests/DmApiSwiftTests"
+        ),
     ]
 )
