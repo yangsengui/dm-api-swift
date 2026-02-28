@@ -7,31 +7,17 @@ public final class DmApi {
     private let raw: DMApiObjC
 
     public init(libraryPath: String? = nil) throws {
-        var error: NSError?
-        guard let client = DMApiObjC(libraryPath: libraryPath, error: &error) else {
-            throw error ?? NSError(
-                domain: "com.distromate.dm-api-swift",
-                code: -1,
-                userInfo: [NSLocalizedDescriptionKey: "Failed to initialize DmApiObjC." ]
-            )
-        }
-        self.raw = client
+        self.raw = try DMApiObjC(libraryPath: libraryPath)
     }
 
     public static func shouldSkipCheck(
         appId: String? = nil,
         publicKey: String? = nil
     ) throws -> Bool {
-        var error: NSError?
-        let shouldSkip = DMApiObjC.shouldSkipCheck(
+        try DMApiObjC.shouldSkipCheck(
             withAppId: appId,
-            publicKey: publicKey,
-            error: &error
+            publicKey: publicKey
         )
-        if let error {
-            throw error
-        }
-        return shouldSkip
     }
 
     public func getLastError() -> String? {
@@ -94,7 +80,7 @@ public final class DmApi {
     }
 
     public func getActivationMode(bufferSize: UInt32 = 64) -> [String: String]? {
-        raw.getActivationMode(withBufferSize: bufferSize) as? [String: String]
+        raw.getActivationMode(withBufferSize: bufferSize)
     }
 
     public func getLicenseKey(bufferSize: UInt32 = 256) -> String? {
@@ -130,34 +116,34 @@ public final class DmApi {
     }
 
     public func checkForUpdates(_ options: JsonMap? = nil) -> JsonMap? {
-        raw.checkForUpdates(options) as? JsonMap
+        raw.check(forUpdates: options)
     }
 
     public func downloadUpdate(_ options: JsonMap? = nil) -> JsonMap? {
-        raw.downloadUpdate(options) as? JsonMap
+        raw.downloadUpdate(options)
     }
 
     public func cancelUpdateDownload(_ options: JsonMap? = nil) -> JsonMap? {
-        raw.cancelUpdateDownload(options) as? JsonMap
+        raw.cancelUpdateDownload(options)
     }
 
     public func getUpdateState() -> JsonMap? {
-        raw.getUpdateState() as? JsonMap
+        raw.getUpdateState()
     }
 
     public func getPostUpdateInfo() -> JsonMap? {
-        raw.getPostUpdateInfo() as? JsonMap
+        raw.getPostUpdateInfo()
     }
 
     public func ackPostUpdateInfo(_ options: JsonMap? = nil) -> JsonMap? {
-        raw.ackPostUpdateInfo(options) as? JsonMap
+        raw.ackPostUpdateInfo(options)
     }
 
     public func waitForUpdateStateChange(
         lastSequence: UInt64,
         timeoutMs: UInt32 = 30_000
     ) -> JsonMap? {
-        raw.waitForUpdateStateChange(lastSequence, timeoutMs: timeoutMs) as? JsonMap
+        raw.wait(forUpdateStateChange: lastSequence, timeoutMs: timeoutMs)
     }
 
     public func quitAndInstall(_ options: JsonMap? = nil) -> Int32 {
@@ -169,6 +155,6 @@ public final class DmApi {
     }
 
     public func jsonToCanonical(_ jsonStr: String) -> String? {
-        raw.jsonToCanonical(jsonStr)
+        raw.json(toCanonical: jsonStr)
     }
 }
